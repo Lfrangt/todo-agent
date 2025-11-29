@@ -149,6 +149,48 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// 强制注册（重置账户）
+app.post('/api/auth/force-register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: '邮箱和密码不能为空' });
+    }
+    
+    // 删除旧用户（如果存在）
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) {
+      // 删除相关数据
+      db.prepare('DELETE FROM tasks WHERE user_id = ?').run(existing.id);
+      db.prepare('DELETE FROM memories WHERE user_id = ?').run(existing.id);
+      db.prepare('DELETE FROM user_profiles WHERE user_id = ?').run(existing.id);
+      db.prepare('DELETE FROM settings WHERE user_id = ?').run(existing.id);
+      db.prepare('DELETE FROM sync_logs WHERE user_id = ?').run(existing.id);
+      db.prepare('DELETE FROM users WHERE id = ?').run(existing.id);
+    }
+    
+    // 创建新用户
+    const userId = uuidv4();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    db.prepare('INSERT INTO users (id, email, password, name) VALUES (?, ?, ?, ?)')
+      .run(userId, email, hashedPassword, name || '');
+    
+    // 生成 token
+    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: userId, email, name }
+    });
+  } catch (err) {
+    console.error('Force register error:', err);
+    res.status(500).json({ error: '重置失败' });
+  }
+});
+
 // 登录
 app.post('/api/auth/login', async (req, res) => {
   try {

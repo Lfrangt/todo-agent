@@ -31,6 +31,15 @@
     <!-- ========== HOME PAGE ========== -->
     <div class="page active" id="page-home">
   <div class="container">
+    <!-- 登录提示条 -->
+    <div class="login-banner" id="login-banner">
+      <div class="login-banner-content">
+        <span class="material-icons-outlined">cloud_sync</span>
+        <span>登录后可同步数据到云端</span>
+      </div>
+      <button class="login-banner-btn" id="login-banner-btn" onclick="if(window.todoApp){window.todoApp.showLoginModal()}">登录</button>
+    </div>
+    
     <header>
           <div class="header-content">
             <div>
@@ -38,6 +47,10 @@
               <h1 id="greeting">今日待办</h1>
             </div>
             <div class="header-actions">
+              <div class="sync-indicator not-logged-in" id="sync-indicator" title="点击登录同步" onclick="if(window.todoApp){window.todoApp.showLoginModal()}">
+                <span class="material-icons-outlined">cloud_off</span>
+                <span class="sync-text">未登录</span>
+              </div>
               <button class="icon-btn" id="search-toggle" title="搜索">
                 <span class="material-icons-outlined">search</span>
               </button>
@@ -605,16 +618,13 @@
               </div>
               <div class="form-group">
                 <label>密码</label>
-                <input type="password" id="sync-password" placeholder="密码">
+                <input type="password" id="sync-password" placeholder="密码（至少6位）">
               </div>
-              <div class="form-group">
-                <label>名字（注册时填写）</label>
-                <input type="text" id="sync-name" placeholder="你的名字">
-              </div>
-              <div class="sync-buttons">
-                <button class="sync-btn primary" id="sync-login-btn">登录</button>
-                <button class="sync-btn" id="sync-register-btn">注册</button>
-              </div>
+              <button class="sync-btn primary full-width" id="sync-auth-btn" onclick="if(window.todoApp){window.todoApp.handleSettingsAuth()}">
+                <span class="material-icons-outlined">login</span>
+                登录 / 注册
+              </button>
+              <p class="sync-hint">新用户将自动注册</p>
               <div class="sync-message" id="sync-message"></div>
             </div>
             
@@ -910,6 +920,45 @@
   <div class="toast" id="toast">
     <span class="material-icons-outlined toast-icon" id="toast-icon">check_circle</span>
     <span id="toast-message">操作成功</span>
+  </div>
+  
+  <!-- Login Modal -->
+  <div class="modal-overlay" id="login-modal" style="display: none;">
+    <div class="modal glass-card login-modal">
+      <div class="modal-header">
+        <h2>☁️ 云端同步</h2>
+        <button class="modal-close" id="login-modal-close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      
+      <div class="login-modal-content">
+        <div class="login-icon">
+          <span class="material-icons-outlined">cloud_sync</span>
+        </div>
+        <p class="login-desc">登录后可在多设备间同步任务、记忆和设置</p>
+        
+        <div class="login-form">
+          <div class="form-group">
+            <label>邮箱</label>
+            <input type="email" id="modal-email" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="modal-password" placeholder="密码（至少6位）">
+          </div>
+          
+          <button class="login-btn primary full-width" id="modal-auth-btn" onclick="if(window.todoApp){window.todoApp.handleAuth()}">
+            <span class="material-icons-outlined">login</span>
+            登录 / 注册
+          </button>
+          
+          <p class="login-hint">新用户将自动注册</p>
+          
+          <div class="login-message" id="modal-message"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

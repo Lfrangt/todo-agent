@@ -4,7 +4,7 @@
 class SyncService {
   constructor(app) {
     this.app = app;
-    this.serverUrl = localStorage.getItem('syncServerUrl') || 'http://localhost:3001';
+    this.serverUrl = localStorage.getItem('syncServerUrl') || 'https://todo-agent-production-e6aa.up.railway.app';
     this.token = localStorage.getItem('syncToken') || '';
     this.user = JSON.parse(localStorage.getItem('syncUser') || 'null');
     this.lastSyncTime = parseInt(localStorage.getItem('lastSyncTime') || '0');
@@ -57,6 +57,32 @@ class SyncService {
       }
     } catch (err) {
       console.error('Register error:', err);
+      return { success: false, error: '网络错误' };
+    }
+  }
+  
+  // 强制注册（重置账户）
+  async forceRegister(email, password, name) {
+    try {
+      const response = await fetch(`${this.serverUrl}/api/auth/force-register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.token = data.token;
+        this.user = data.user;
+        localStorage.setItem('syncToken', this.token);
+        localStorage.setItem('syncUser', JSON.stringify(this.user));
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (err) {
+      console.error('Force register error:', err);
       return { success: false, error: '网络错误，请检查服务器地址' };
     }
   }
@@ -4622,6 +4648,279 @@ class TodoApp {
       }, 3000);
     }
   }
+  
+  // 显示登录弹窗
+  showLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  }
+  
+  // 隐藏登录弹窗
+  hideLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+  
+  // 处理登录/注册（弹窗版）
+  async handleAuth() {
+    const email = document.getElementById('modal-email')?.value?.trim();
+    const password = document.getElementById('modal-password')?.value;
+    const authBtn = document.getElementById('modal-auth-btn');
+    
+    if (!email || !password) {
+      this.showModalMessage('请输入邮箱和密码', 'error');
+      return;
+    }
+    
+    if (password.length < 6) {
+      this.showModalMessage('密码至少需要6位', 'error');
+      return;
+    }
+    
+    if (authBtn) {
+      authBtn.disabled = true;
+      authBtn.innerHTML = '<span class="material-icons-outlined">hourglass_empty</span> 处理中...';
+    }
+    
+    // 先尝试登录
+    let result = await this.syncService.login(email, password);
+    
+    // 如果用户不存在，自动注册
+    if (!result.success && result.error === '用户不存在') {
+      this.showModalMessage('正在为您注册...', 'success');
+      result = await this.syncService.register(email, password, '');
+    }
+    
+    if (authBtn) {
+      authBtn.disabled = false;
+      authBtn.innerHTML = '<span class="material-icons-outlined">login</span> 登录 / 注册';
+    }
+    
+    if (result.success) {
+      this.showModalMessage('✅ 登录成功！', 'success');
+      this.updateSyncIndicator();
+      this.updateSyncUIState();
+      setTimeout(() => {
+        this.hideLoginModal();
+        this.syncService.fullSync();
+        this.showToast('同步数据中...', 'success');
+      }, 800);
+    } else {
+      this.showModalMessage(result.error, 'error');
+    }
+  }
+  
+  // 处理登录/注册（设置页版）
+  async handleSettingsAuth(forceRegister = false) {
+    const email = document.getElementById('sync-email')?.value?.trim();
+    const password = document.getElementById('sync-password')?.value;
+    const authBtn = document.getElementById('sync-auth-btn');
+    const messageEl = document.getElementById('sync-message');
+    
+    const showMsg = (msg, type, showReset = false) => {
+      if (messageEl) {
+        if (showReset) {
+          messageEl.innerHTML = `${msg} <button class="reset-btn" onclick="window.todoApp.handleSettingsAuth(true)">重新注册此邮箱</button>`;
+        } else {
+          messageEl.textContent = msg;
+        }
+        messageEl.className = `sync-message ${type}`;
+        messageEl.style.display = 'block';
+      }
+    };
+    
+    if (!email || !password) {
+      showMsg('请输入邮箱和密码', 'error');
+      return;
+    }
+    
+    if (password.length < 6) {
+      showMsg('密码至少需要6位', 'error');
+      return;
+    }
+    
+    if (authBtn) {
+      authBtn.disabled = true;
+      authBtn.innerHTML = '<span class="material-icons-outlined">hourglass_empty</span> 处理中...';
+    }
+    
+    let result;
+    
+    if (forceRegister) {
+      // 强制注册（会覆盖旧账户）
+      showMsg('正在重新注册...', 'success');
+      result = await this.syncService.forceRegister(email, password, '');
+    } else {
+      // 先尝试登录
+      result = await this.syncService.login(email, password);
+      
+      // 如果用户不存在，自动注册
+      if (!result.success && result.error === '用户不存在') {
+        showMsg('正在为您注册...', 'success');
+        result = await this.syncService.register(email, password, '');
+      }
+    }
+    
+    if (authBtn) {
+      authBtn.disabled = false;
+      authBtn.innerHTML = '<span class="material-icons-outlined">login</span> 登录 / 注册';
+    }
+    
+    if (result.success) {
+      showMsg('✅ 登录成功！', 'success');
+      this.updateSyncIndicator();
+      this.updateSyncUIState();
+      this.showToast('同步数据中...', 'success');
+      this.syncService.fullSync();
+    } else if (result.error === '密码错误') {
+      showMsg('密码错误，忘记密码？', 'error', true);
+    } else {
+      showMsg(result.error, 'error');
+    }
+  }
+  
+  // 初始化登录弹窗事件
+  initLoginModal() {
+    const syncIndicator = document.getElementById('sync-indicator');
+    const closeBtn = document.getElementById('login-modal-close');
+    const modalOverlay = document.getElementById('login-modal');
+    
+    // 点击同步指示器打开登录弹窗
+    if (syncIndicator) {
+      syncIndicator.addEventListener('click', () => {
+        if (this.syncService.isLoggedIn()) {
+          // 已登录，直接同步
+          this.syncService.fullSync().then(result => {
+            if (result.success) {
+              this.showToast('同步完成！', 'success');
+            }
+          });
+        } else {
+          // 未登录，显示登录弹窗
+          this.showLoginModal();
+        }
+      });
+    }
+    
+    // 关闭按钮
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.hideLoginModal());
+    }
+    
+    // 点击遮罩关闭
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+          this.hideLoginModal();
+        }
+      });
+    }
+    
+    // 登录/注册按钮（合并）
+    const authBtn = document.getElementById('modal-auth-btn');
+    if (authBtn) {
+      authBtn.addEventListener('click', async () => {
+        const email = document.getElementById('modal-email')?.value?.trim();
+        const password = document.getElementById('modal-password')?.value;
+        
+        if (!email || !password) {
+          this.showModalMessage('请输入邮箱和密码', 'error');
+          return;
+        }
+        
+        if (password.length < 6) {
+          this.showModalMessage('密码至少需要6位', 'error');
+          return;
+        }
+        
+        authBtn.disabled = true;
+        authBtn.innerHTML = '<span class="material-icons-outlined">hourglass_empty</span> 处理中...';
+        
+        // 先尝试登录
+        let result = await this.syncService.login(email, password);
+        
+        // 如果用户不存在，自动注册
+        if (!result.success && result.error === '用户不存在') {
+          this.showModalMessage('正在为您注册...', 'success');
+          result = await this.syncService.register(email, password, '');
+        }
+        
+        authBtn.disabled = false;
+        authBtn.innerHTML = '<span class="material-icons-outlined">login</span> 登录 / 注册';
+        
+        if (result.success) {
+          this.showModalMessage('✅ 登录成功！', 'success');
+          this.updateSyncIndicator();
+          this.updateSyncUIState();
+          setTimeout(() => {
+            this.hideLoginModal();
+            this.syncService.fullSync();
+            this.showToast('同步数据中...', 'success');
+          }, 800);
+        } else {
+          this.showModalMessage(result.error, 'error');
+        }
+      });
+    }
+    
+    // 登录横幅按钮
+    const loginBannerBtn = document.getElementById('login-banner-btn');
+    if (loginBannerBtn) {
+      loginBannerBtn.addEventListener('click', () => this.showLoginModal());
+    }
+    
+    // 初始化同步指示器状态
+    this.updateSyncIndicator();
+  }
+  
+  // 显示弹窗消息
+  showModalMessage(message, type) {
+    const msgEl = document.getElementById('modal-message');
+    if (msgEl) {
+      msgEl.textContent = message;
+      msgEl.className = `login-message show ${type}`;
+    }
+  }
+  
+  // 更新同步指示器
+  updateSyncIndicator() {
+    const indicator = document.getElementById('sync-indicator');
+    const loginBanner = document.getElementById('login-banner');
+    
+    if (this.syncService.isLoggedIn()) {
+      // 已登录
+      if (indicator) {
+        indicator.className = 'sync-indicator logged-in';
+        indicator.title = '点击同步';
+        const icon = indicator.querySelector('.material-icons-outlined');
+        const text = indicator.querySelector('.sync-text');
+        if (icon) icon.textContent = 'cloud_done';
+        if (text) text.textContent = '已同步';
+      }
+      // 隐藏登录横幅
+      if (loginBanner) {
+        loginBanner.classList.add('hidden');
+      }
+    } else {
+      // 未登录
+      if (indicator) {
+        indicator.className = 'sync-indicator not-logged-in';
+        indicator.title = '点击登录同步';
+        const icon = indicator.querySelector('.material-icons-outlined');
+        const text = indicator.querySelector('.sync-text');
+        if (icon) icon.textContent = 'cloud_off';
+        if (text) text.textContent = '未登录';
+      }
+      // 显示登录横幅
+      if (loginBanner) {
+        loginBanner.classList.remove('hidden');
+      }
+    }
+  }
 
   // ==================== PAGE NAVIGATION ====================
 
@@ -5136,6 +5435,7 @@ class TodoApp {
     
     // Sync event listeners
     this.initSyncUI();
+    this.initLoginModal();
     
     // Daily Plan Settings
     const dailyPlanToggle = document.getElementById('daily-plan-toggle');
