@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Smart Todo</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Smart Todo">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  
+  <!-- iOS Splash Screens -->
+  <link rel="apple-touch-startup-image" href="icons/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="icons/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)">
+</head>
+
+<body data-theme="dark">
+  <!-- Background -->
+  <div class="gradient-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Pages Container -->
+  <div class="pages-container">
+    
+    <!-- ========== HOME PAGE ========== -->
+    <div class="page active" id="page-home">
+  <div class="container">
+    <header>
+          <div class="header-content">
+            <div>
+              <p class="date-display" id="date-display"></p>
+              <h1 id="greeting">今日待办</h1>
+            </div>
+            <div class="header-actions">
+              <button class="icon-btn" id="search-toggle" title="搜索">
+                <span class="material-icons-outlined">search</span>
+              </button>
+              <div class="progress-ring-container">
+                <svg class="progress-ring" width="50" height="50">
+                  <circle class="progress-ring-bg" cx="25" cy="25" r="21" />
+                  <circle class="progress-ring-fill" cx="25" cy="25" r="21" id="progress-ring" />
+                </svg>
+                <span class="progress-text" id="progress-text">0%</span>
+              </div>
+            </div>
+          </div>
+          <p class="subtitle" id="subtitle">开启高效的一天 ✨</p>
+          
+          <!-- Search Bar -->
+          <div class="search-bar" id="search-bar">
+            <span class="material-icons-outlined">search</span>
+            <input type="text" id="search-input" placeholder="搜索任务...">
+            <button class="search-close" id="search-close">
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+    </header>
+
+    <main>
+          <!-- Stats Bar -->
+          <div class="stats-bar">
+            <div class="stat-item">
+              <span class="stat-number" id="total-tasks">0</span>
+              <span class="stat-label">总任务</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number" id="completed-tasks">0</span>
+              <span class="stat-label">已完成</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number" id="pending-tasks">0</span>
+              <span class="stat-label">待完成</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item clickable" id="start-pomodoro">
+              <span class="stat-number pomodoro-icon">🍅</span>
+              <span class="stat-label">番茄钟</span>
+            </div>
+          </div>
+
+      <!-- AI Suggestions -->
+          <div class="glass-card ai-card" id="ai-card">
+        <div class="ai-header">
+          <div class="ai-icon-box">
+                <span class="material-icons-outlined">auto_awesome</span>
+              </div>
+              <div>
+                <h2 style="margin-bottom: 0;">AI 智能建议</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">基于您的任务模式</p>
+              </div>
+              <button class="collapse-btn" id="ai-collapse">
+                <span class="material-icons-outlined">expand_less</span>
+              </button>
+            </div>
+            <div class="ai-suggestions" id="ai-suggestions">
+              <!-- AI suggestions populated by JS -->
+            </div>
+          </div>
+
+          <!-- Filter Tabs -->
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">全部</button>
+            <button class="filter-tab" data-filter="pending">待完成</button>
+            <button class="filter-tab" data-filter="completed">已完成</button>
+            <button class="filter-tab" data-filter="high">⚡ 紧急</button>
+            <button class="filter-tab" data-filter="today">📅 今天</button>
+          </div>
+
+          <!-- Task List -->
+          <div class="glass-card task-card">
+            <div class="task-card-header">
+              <h2>任务列表</h2>
+              <div class="task-card-actions">
+                <button class="sort-btn" id="sort-btn" title="排序">
+                  <span class="material-icons-outlined">sort</span>
+                </button>
+                <button class="clear-completed-btn" id="clear-completed">
+                  <span class="material-icons-outlined">delete_sweep</span>
+                  清除已完成
+                </button>
+              </div>
+            </div>
+            <div id="task-list" class="task-list">
+              <!-- Tasks populated by JS -->
+            </div>
+            <div class="empty-state" id="empty-state">
+              <span class="material-icons-outlined empty-icon">task_alt</span>
+              <p>暂无任务</p>
+              <p class="empty-hint">点击下方 + 按钮添加新任务</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ========== CALENDAR PAGE ========== -->
+    <div class="page" id="page-calendar">
+      <div class="container">
+        <header class="page-header">
+          <h1>📅 日历视图</h1>
+          <p class="subtitle">按日期查看任务</p>
+        </header>
+        
+        <main>
+          <!-- Calendar Navigation -->
+          <div class="calendar-nav">
+            <button class="cal-nav-btn" id="prev-month">
+              <span class="material-icons-outlined">chevron_left</span>
+            </button>
+            <h2 id="current-month">2024年1月</h2>
+            <button class="cal-nav-btn" id="next-month">
+              <span class="material-icons-outlined">chevron_right</span>
+            </button>
+          </div>
+          
+          <!-- Calendar Grid -->
+          <div class="glass-card calendar-card">
+            <div class="calendar-weekdays">
+              <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+              <!-- Calendar days populated by JS -->
+            </div>
+          </div>
+          
+          <!-- Selected Date Tasks -->
+          <div class="glass-card selected-date-card">
+            <div class="selected-date-header">
+              <h3 id="selected-date-title">选择日期查看任务</h3>
+              <button class="add-task-date-btn" id="add-task-date">
+                <span class="material-icons-outlined">add</span>
+              </button>
+            </div>
+            <div class="selected-date-tasks" id="selected-date-tasks">
+              <div class="no-tasks-hint">
+                <span class="material-icons-outlined">event_available</span>
+                <p>点击日期查看当天任务</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ========== AI AGENT PAGE ========== -->
+    <div class="page" id="page-agent">
+      <div class="container agent-container">
+        <header class="page-header">
+          <div class="agent-header">
+            <div class="agent-avatar">
+              <span class="material-icons-outlined">psychology</span>
+            </div>
+            <div>
+              <h1>AI 助手</h1>
+              <p class="subtitle" id="agent-status">在线 · 随时为您服务</p>
+            </div>
+          </div>
+        </header>
+        
+        <main class="agent-main">
+          <!-- Chat Messages -->
+          <div class="chat-container" id="chat-container">
+            <div class="chat-messages" id="chat-messages">
+              <!-- Messages populated by JS -->
+            </div>
+          </div>
+          
+          <!-- Quick Actions -->
+          <div class="quick-actions" id="quick-actions">
+            <button class="quick-action-btn" data-action="daily-plan">
+              <span class="material-icons-outlined">auto_awesome</span>
+              每日规划
+            </button>
+            <button class="quick-action-btn" data-action="today-summary">
+              <span class="material-icons-outlined">summarize</span>
+              今日总结
+            </button>
+            <button class="quick-action-btn" data-action="suggest">
+              <span class="material-icons-outlined">tips_and_updates</span>
+              智能建议
+            </button>
+            <button class="quick-action-btn" data-action="add-task">
+              <span class="material-icons-outlined">add_task</span>
+              添加任务
+            </button>
+          </div>
+          
+          <!-- Chat Input -->
+          <div class="chat-input-container">
+            <div class="chat-input-actions">
+              <button class="chat-action-btn" id="upload-image-btn" title="发送图片">
+                <span class="material-icons-outlined">image</span>
+              </button>
+              <button class="chat-action-btn" id="upload-file-btn" title="发送文件">
+                <span class="material-icons-outlined">attach_file</span>
+              </button>
+              <button class="chat-action-btn" id="voice-btn" title="语音输入">
+                <span class="material-icons-outlined">mic</span>
+              </button>
+            </div>
+            <div class="chat-input-wrapper">
+              <input 
+                type="text"
+                id="chat-input" 
+                placeholder="输入消息，或发送图片/文件"
+              >
+              <div class="attachment-preview" id="attachment-preview"></div>
+            </div>
+            <button class="send-btn" id="send-btn" title="发送">
+              <span class="material-icons-outlined">send</span>
+            </button>
+          </div>
+          <input type="file" id="image-input" accept="image/*" style="display: none;">
+          <input type="file" id="file-input" accept=".txt,.pdf,.doc,.docx,.md,.json,.csv" style="display: none;">
+        </main>
+      </div>
+    </div>
+
+    <!-- ========== STATS PAGE ========== -->
+    <div class="page" id="page-stats">
+      <div class="container">
+        <header class="page-header">
+          <h1>📊 统计分析</h1>
+          <p class="subtitle">您的任务完成情况</p>
+        </header>
+        
+        <main>
+          <!-- Overview Cards -->
+          <div class="stats-overview">
+            <div class="glass-card stat-card">
+              <div class="stat-card-icon" style="background: rgba(99, 102, 241, 0.2);">
+                <span class="material-icons-outlined" style="color: #6366f1;">assignment</span>
+              </div>
+              <div class="stat-card-content">
+                <span class="stat-card-value" id="stats-total">0</span>
+                <span class="stat-card-label">总任务数</span>
+              </div>
+            </div>
+            <div class="glass-card stat-card">
+              <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.2);">
+                <span class="material-icons-outlined" style="color: #10b981;">check_circle</span>
+              </div>
+              <div class="stat-card-content">
+                <span class="stat-card-value" id="stats-completed">0</span>
+                <span class="stat-card-label">已完成</span>
+              </div>
+            </div>
+            <div class="glass-card stat-card">
+              <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.2);">
+                <span class="material-icons-outlined" style="color: #f59e0b;">pending_actions</span>
+              </div>
+              <div class="stat-card-content">
+                <span class="stat-card-value" id="stats-pending">0</span>
+                <span class="stat-card-label">待完成</span>
+              </div>
+            </div>
+            <div class="glass-card stat-card">
+              <div class="stat-card-icon" style="background: rgba(239, 68, 68, 0.2);">
+                <span class="material-icons-outlined" style="color: #ef4444;">schedule</span>
+              </div>
+              <div class="stat-card-content">
+                <span class="stat-card-value" id="stats-overdue">0</span>
+                <span class="stat-card-label">已逾期</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Completion Rate Chart -->
+          <div class="glass-card chart-card">
+            <h3>完成率</h3>
+            <div class="completion-chart">
+              <div class="completion-ring-container">
+                <svg class="completion-ring" width="140" height="140">
+                  <circle class="completion-ring-bg" cx="70" cy="70" r="60" />
+                  <circle class="completion-ring-fill" cx="70" cy="70" r="60" id="completion-ring" />
+                </svg>
+                <div class="completion-text">
+                  <span class="completion-percent" id="completion-percent">0%</span>
+                  <span class="completion-label">完成率</span>
+                </div>
+              </div>
+              <div class="completion-legend">
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #10b981;"></span>
+                  <span>已完成</span>
+                  <span class="legend-value" id="legend-completed">0</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #64748b;"></span>
+                  <span>待完成</span>
+                  <span class="legend-value" id="legend-pending">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weekly Activity -->
+          <div class="glass-card chart-card">
+            <h3>本周活动</h3>
+            <div class="weekly-chart" id="weekly-chart">
+              <!-- Weekly bars populated by JS -->
+            </div>
+          </div>
+
+          <!-- Category Breakdown -->
+          <div class="glass-card chart-card">
+            <h3>分类统计</h3>
+            <div class="category-stats" id="category-stats">
+              <!-- Category stats populated by JS -->
+            </div>
+          </div>
+
+          <!-- Productivity Score -->
+          <div class="glass-card productivity-card">
+            <div class="productivity-header">
+              <h3>生产力评分</h3>
+              <span class="productivity-badge" id="productivity-badge">优秀</span>
+            </div>
+            <div class="productivity-score">
+              <span class="score-value" id="productivity-score">85</span>
+              <span class="score-max">/100</span>
+            </div>
+            <p class="productivity-tip" id="productivity-tip">继续保持！您的任务完成率很高。</p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ========== SETTINGS PAGE ========== -->
+    <div class="page" id="page-settings">
+      <div class="container">
+        <header class="page-header">
+          <h1>⚙️ 设置</h1>
+          <p class="subtitle">个性化您的体验</p>
+        </header>
+        
+        <main>
+          <!-- Appearance -->
+          <div class="glass-card settings-section">
+            <h3>🎨 外观</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">主题模式</span>
+                <span class="setting-desc">选择深色或浅色主题</span>
+              </div>
+              <div class="theme-toggle" id="theme-toggle">
+                <button class="theme-btn active" data-theme="dark">
+                  <span class="material-icons-outlined">dark_mode</span>
+                </button>
+                <button class="theme-btn" data-theme="light">
+                  <span class="material-icons-outlined">light_mode</span>
+                </button>
+                <button class="theme-btn" data-theme="auto">
+                  <span class="material-icons-outlined">brightness_auto</span>
+                </button>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">主题色</span>
+                <span class="setting-desc">选择您喜欢的颜色</span>
+              </div>
+              <div class="color-picker" id="color-picker">
+                <button class="color-btn active" data-color="indigo" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"></button>
+                <button class="color-btn" data-color="rose" style="background: linear-gradient(135deg, #f43f5e, #ec4899);"></button>
+                <button class="color-btn" data-color="emerald" style="background: linear-gradient(135deg, #10b981, #06b6d4);"></button>
+                <button class="color-btn" data-color="amber" style="background: linear-gradient(135deg, #f59e0b, #ef4444);"></button>
+                <button class="color-btn" data-color="violet" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notifications -->
+          <div class="glass-card settings-section">
+            <h3>🔔 通知</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">任务提醒</span>
+                <span class="setting-desc">在任务到期前提醒您</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="notification-toggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">完成音效</span>
+                <span class="setting-desc">完成任务时播放音效</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="sound-toggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Pomodoro Settings -->
+          <div class="glass-card settings-section">
+            <h3>🍅 番茄钟</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">专注时长</span>
+                <span class="setting-desc">每个番茄钟的工作时间</span>
+              </div>
+              <select class="setting-select" id="pomodoro-work">
+                <option value="15">15 分钟</option>
+                <option value="25" selected>25 分钟</option>
+                <option value="30">30 分钟</option>
+                <option value="45">45 分钟</option>
+                <option value="60">60 分钟</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">休息时长</span>
+                <span class="setting-desc">每个番茄钟后的休息时间</span>
+              </div>
+              <select class="setting-select" id="pomodoro-break">
+                <option value="3">3 分钟</option>
+                <option value="5" selected>5 分钟</option>
+                <option value="10">10 分钟</option>
+                <option value="15">15 分钟</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- AI Settings -->
+          <div class="glass-card settings-section">
+            <h3>🤖 AI 助手</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">AI 服务</span>
+                <span class="setting-desc">选择 AI 模型提供商</span>
+              </div>
+              <select class="setting-select" id="ai-provider">
+                <option value="local">本地模式</option>
+                <option value="gemini" selected>Google Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="deepseek">DeepSeek</option>
+              </select>
+            </div>
+            <div class="setting-item api-key-row" id="api-key-setting">
+              <div class="setting-info">
+                <span class="setting-label">API Key</span>
+                <span class="setting-desc">输入您的 Gemini API 密钥</span>
+              </div>
+            </div>
+            <div class="api-key-input-row">
+              <input type="text" class="api-key-input" id="ai-api-key" placeholder="AIzaSy...">
+              <button class="save-api-btn" id="save-api-btn" onclick="todoApp.saveApiKey()">
+                <span class="material-icons-outlined">save</span>
+                保存
+              </button>
+            </div>
+            <div class="api-key-status" id="api-key-status"></div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">语音输入</span>
+                <span class="setting-desc">使用语音添加任务</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="voice-toggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">每日智能规划</span>
+                <span class="setting-desc">每天早上自动生成待办建议</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="daily-plan-toggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-item" id="daily-plan-time-setting">
+              <div class="setting-info">
+                <span class="setting-label">规划生成时间</span>
+                <span class="setting-desc">每天几点生成规划</span>
+              </div>
+              <select id="daily-plan-time" class="setting-select">
+                <option value="6">早上 6:00</option>
+                <option value="7">早上 7:00</option>
+                <option value="8" selected>早上 8:00</option>
+                <option value="9">早上 9:00</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Personal Profile -->
+          <div class="glass-card settings-section">
+            <h3>👤 个人背景</h3>
+            <p class="section-desc">让小助更了解你，提供更贴心的建议</p>
+            
+            <div class="profile-form">
+              <div class="form-group">
+                <label for="profile-name">你的名字</label>
+                <input type="text" id="profile-name" placeholder="怎么称呼你？">
+              </div>
+              
+              <div class="form-group">
+                <label for="profile-occupation">职业/身份</label>
+                <input type="text" id="profile-occupation" placeholder="例如：大学生、产品经理、自由职业者">
+              </div>
+              
+              <div class="form-group">
+                <label for="profile-background">个人背景</label>
+                <textarea id="profile-background" rows="3" placeholder="例如：目前在温哥华读研，明年毕业要找工作..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="profile-goals">目标与计划</label>
+                <textarea id="profile-goals" rows="3" placeholder="例如：想在毕业前找到工作，同时准备雅思考试..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="profile-challenges">遇到的挑战</label>
+                <textarea id="profile-challenges" rows="3" placeholder="例如：时间管理不太好，经常拖延..."></textarea>
+              </div>
+              
+              <button class="save-profile-btn" id="save-profile-btn">
+                <span class="material-icons-outlined">save</span>
+                保存个人背景
+              </button>
+              <div class="profile-status" id="profile-status"></div>
+            </div>
+            
+            <div class="memory-section">
+              <h4>🧠 AI 记忆</h4>
+              <p class="section-desc">小助从对话中记住的信息</p>
+              <div class="memory-display" id="memory-display">
+                暂无记忆
+              </div>
+              <button class="clear-memory-btn" id="clear-memory-btn">
+                <span class="material-icons-outlined">delete_sweep</span>
+                清除记忆
+              </button>
+            </div>
+          </div>
+
+          <!-- Cloud Sync -->
+          <div class="glass-card settings-section">
+            <h3>☁️ 云端同步</h3>
+            <p class="section-desc">登录后可在多设备间同步数据</p>
+            
+            <!-- 未登录状态 -->
+            <div id="sync-login-form">
+              <div class="form-group">
+                <label>服务器地址</label>
+                <input type="text" id="sync-server-url" placeholder="http://localhost:3001">
+              </div>
+              <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" id="sync-email" placeholder="your@email.com">
+              </div>
+              <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="sync-password" placeholder="密码">
+              </div>
+              <div class="form-group">
+                <label>名字（注册时填写）</label>
+                <input type="text" id="sync-name" placeholder="你的名字">
+              </div>
+              <div class="sync-buttons">
+                <button class="sync-btn primary" id="sync-login-btn">登录</button>
+                <button class="sync-btn" id="sync-register-btn">注册</button>
+              </div>
+              <div class="sync-message" id="sync-message"></div>
+            </div>
+            
+            <!-- 已登录状态 -->
+            <div id="sync-logged-in" style="display: none;">
+              <div class="sync-user-info">
+                <span class="material-icons-outlined">account_circle</span>
+                <div>
+                  <div class="sync-user-name" id="sync-user-name">用户</div>
+                  <div class="sync-user-email" id="sync-user-email">email@example.com</div>
+                </div>
+              </div>
+              <div class="sync-status-row">
+                <span class="sync-status" id="sync-status">✅ 已同步</span>
+                <span class="last-sync-time" id="last-sync-time"></span>
+              </div>
+              <div class="sync-buttons">
+                <button class="sync-btn primary" id="sync-now-btn">
+                  <span class="material-icons-outlined">sync</span>
+                  立即同步
+                </button>
+                <button class="sync-btn danger" id="sync-logout-btn">退出登录</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Management -->
+          <div class="glass-card settings-section">
+            <h3>💾 数据管理</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">导出数据</span>
+                <span class="setting-desc">将任务导出为 JSON 文件</span>
+              </div>
+              <button class="setting-btn" id="export-data">
+                <span class="material-icons-outlined">download</span>
+                导出
+              </button>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">导入数据</span>
+                <span class="setting-desc">从 JSON 文件导入任务</span>
+              </div>
+              <button class="setting-btn" id="import-data">
+                <span class="material-icons-outlined">upload</span>
+                导入
+              </button>
+              <input type="file" id="import-file" accept=".json" style="display: none;">
+            </div>
+            <div class="setting-item danger">
+              <div class="setting-info">
+                <span class="setting-label">清除所有数据</span>
+                <span class="setting-desc">删除所有任务和设置（不可恢复）</span>
+              </div>
+              <button class="setting-btn danger" id="clear-all-data">
+                <span class="material-icons-outlined">delete_forever</span>
+                清除
+              </button>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="glass-card settings-section">
+            <h3>ℹ️ 关于</h3>
+            <div class="about-info">
+              <div class="app-logo">
+                <span class="material-icons-outlined">task_alt</span>
+              </div>
+              <div class="app-details">
+                <h4>Smart Agent To-Do</h4>
+                <p>版本 2.0.0</p>
+                <p class="app-desc">一款智能、美观的任务管理应用</p>
+              </div>
+            </div>
+            <div class="keyboard-shortcuts">
+              <h4>快捷键</h4>
+              <div class="shortcut-item">
+                <span class="shortcut-keys"><kbd>⌘</kbd> + <kbd>N</kbd></span>
+                <span>新建任务</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-keys"><kbd>⌘</kbd> + <kbd>F</kbd></span>
+                <span>搜索任务</span>
+              </div>
+              <div class="shortcut-item">
+                <span class="shortcut-keys"><kbd>Esc</kbd></span>
+                <span>关闭弹窗</span>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODALS ========== -->
+  
+  <!-- Add/Edit Task Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal glass-card" id="task-modal">
+      <div class="modal-header">
+        <h2 id="modal-title">添加新任务</h2>
+        <button class="modal-close" id="modal-close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      <form id="task-form">
+        <div class="form-group">
+          <label for="task-input">任务内容</label>
+          <input type="text" id="task-input" placeholder="输入任务内容..." autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label for="task-notes">备注（可选）</label>
+          <textarea id="task-notes" placeholder="添加备注信息..." rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="task-priority">优先级</label>
+            <select id="task-priority">
+              <option value="low">🟢 低</option>
+              <option value="medium" selected>🟡 中</option>
+              <option value="high">🔴 高</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="task-date">到期日期</label>
+            <input type="date" id="task-date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>分类标签</label>
+          <div class="category-chips">
+            <button type="button" class="category-chip active" data-category="work">💼 工作</button>
+            <button type="button" class="category-chip" data-category="personal">🏠 个人</button>
+            <button type="button" class="category-chip" data-category="study">📚 学习</button>
+            <button type="button" class="category-chip" data-category="health">💪 健康</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="task-recurring">
+            <span class="checkbox-custom"></span>
+            设为重复任务
+          </label>
+          <div class="recurring-options" id="recurring-options">
+            <select id="recurring-type">
+              <option value="daily">每天</option>
+              <option value="weekly">每周</option>
+              <option value="monthly">每月</option>
+            </select>
+        </div>
+      </div>
+        <div class="form-actions">
+          <button type="button" class="cancel-btn" id="cancel-btn">取消</button>
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <span class="material-icons-outlined">add_task</span>
+            添加任务
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pomodoro Modal -->
+  <div class="modal-overlay" id="pomodoro-overlay">
+    <div class="modal glass-card pomodoro-modal" id="pomodoro-modal">
+      <div class="modal-header">
+        <h2>🍅 番茄钟</h2>
+        <button class="modal-close" id="pomodoro-close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      <div class="pomodoro-content">
+        <div class="pomodoro-timer-container">
+          <svg class="pomodoro-ring" width="200" height="200">
+            <circle class="pomodoro-ring-bg" cx="100" cy="100" r="90" />
+            <circle class="pomodoro-ring-fill" cx="100" cy="100" r="90" id="pomodoro-ring" />
+          </svg>
+          <div class="pomodoro-time" id="pomodoro-time">25:00</div>
+        </div>
+        <p class="pomodoro-status" id="pomodoro-status">准备开始专注</p>
+        <div class="pomodoro-task" id="pomodoro-task">
+          <span class="material-icons-outlined">task_alt</span>
+          <span id="pomodoro-task-name">选择一个任务</span>
+          </div>
+        <div class="pomodoro-controls">
+          <button class="pomodoro-btn secondary" id="pomodoro-reset">
+            <span class="material-icons-outlined">refresh</span>
+          </button>
+          <button class="pomodoro-btn primary" id="pomodoro-start">
+            <span class="material-icons-outlined" id="pomodoro-start-icon">play_arrow</span>
+          </button>
+          <button class="pomodoro-btn secondary" id="pomodoro-skip">
+            <span class="material-icons-outlined">skip_next</span>
+          </button>
+          </div>
+        <div class="pomodoro-sessions">
+          <span id="pomodoro-count">0</span> 个番茄完成
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sort Menu -->
+  <div class="dropdown-menu" id="sort-menu">
+    <button class="dropdown-item active" data-sort="default">
+      <span class="material-icons-outlined">sort</span>
+      默认排序
+    </button>
+    <button class="dropdown-item" data-sort="date-asc">
+      <span class="material-icons-outlined">arrow_upward</span>
+      日期升序
+    </button>
+    <button class="dropdown-item" data-sort="date-desc">
+      <span class="material-icons-outlined">arrow_downward</span>
+      日期降序
+    </button>
+    <button class="dropdown-item" data-sort="priority">
+      <span class="material-icons-outlined">priority_high</span>
+      按优先级
+    </button>
+    <button class="dropdown-item" data-sort="alpha">
+      <span class="material-icons-outlined">sort_by_alpha</span>
+      按名称
+    </button>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu">
+    <button class="context-item" data-action="edit">
+      <span class="material-icons-outlined">edit</span>
+      编辑
+    </button>
+    <button class="context-item" data-action="duplicate">
+      <span class="material-icons-outlined">content_copy</span>
+      复制
+    </button>
+    <button class="context-item" data-action="pomodoro">
+      <span class="material-icons-outlined">timer</span>
+      番茄钟
+    </button>
+    <button class="context-item priority-toggle" data-action="priority">
+      <span class="material-icons-outlined">flag</span>
+      切换优先级
+    </button>
+    <div class="context-divider"></div>
+    <button class="context-item danger" data-action="delete">
+      <span class="material-icons-outlined">delete</span>
+      删除
+    </button>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div class="modal-overlay" id="confirm-overlay">
+    <div class="modal glass-card confirm-modal">
+      <div class="confirm-icon" id="confirm-icon">
+        <span class="material-icons-outlined">warning</span>
+      </div>
+      <h3 id="confirm-title">确认操作</h3>
+      <p id="confirm-message">您确定要执行此操作吗？</p>
+      <div class="confirm-actions">
+        <button class="cancel-btn" id="confirm-cancel">取消</button>
+        <button class="submit-btn danger" id="confirm-ok">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="glass-card bottom-nav">
+    <button class="nav-btn active" data-page="home">
+      <span class="material-icons-outlined">home</span>
+      <span class="nav-label">首页</span>
+    </button>
+    <button class="nav-btn" data-page="agent">
+      <span class="material-icons-outlined">psychology</span>
+      <span class="nav-label">AI</span>
+    </button>
+    <button id="add-task-btn" class="add-task-btn">
+      <span class="material-icons-outlined">add</span>
+    </button>
+    <button class="nav-btn" data-page="calendar">
+      <span class="material-icons-outlined">calendar_month</span>
+      <span class="nav-label">日历</span>
+    </button>
+    <button class="nav-btn" data-page="settings">
+      <span class="material-icons-outlined">settings</span>
+      <span class="nav-label">设置</span>
+    </button>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <span class="material-icons-outlined toast-icon" id="toast-icon">check_circle</span>
+    <span id="toast-message">操作成功</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

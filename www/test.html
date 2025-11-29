@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>测试页面</title>
+</head>
+<body style="background: #1a1a2e; color: white; font-family: sans-serif; padding: 50px; text-align: center;">
+  <h1>JavaScript 测试</h1>
+  <button onclick="alert('按钮点击成功！')" style="padding: 20px 40px; font-size: 20px; background: #10b981; color: white; border: none; border-radius: 10px; cursor: pointer;">
+    点击测试
+  </button>
+  <br><br>
+  <button onclick="document.getElementById('result').innerText = '成功！时间：' + new Date().toLocaleTimeString()" style="padding: 20px 40px; font-size: 20px; background: #6366f1; color: white; border: none; border-radius: 10px; cursor: pointer;">
+    显示时间
+  </button>
+  <p id="result" style="margin-top: 30px; font-size: 24px;">等待点击...</p>
+</body>
+</html>
+

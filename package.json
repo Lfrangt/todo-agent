@@ -1,0 +1,37 @@
+{
+  "name": "smart-todo-agent",
+  "version": "2.0.0",
+  "description": "一款智能、美观的任务管理应用",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'No build step needed for vanilla JS'",
+    "cap:init": "npx cap init 'Smart Todo' 'com.smarttodo.agent' --web-dir .",
+    "cap:add:ios": "npx cap add ios",
+    "cap:sync": "npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "ios": "npm run cap:sync && npm run cap:open:ios"
+  },
+  "keywords": [
+    "todo",
+    "task",
+    "productivity",
+    "ios"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0",
+    "@capacitor/local-notifications": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "serve": "^14.2.0",
+    "typescript": "^5.9.3"
+  }
+}
