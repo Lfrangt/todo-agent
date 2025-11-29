@@ -61,6 +61,31 @@ class SyncService {
     }
   }
   
+  // 修改密码
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await fetch(`${this.serverUrl}/api/auth/change-password`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (err) {
+      console.error('Change password error:', err);
+      return { success: false, error: '网络错误' };
+    }
+  }
+  
   // 强制注册（重置账户）
   async forceRegister(email, password, name) {
     try {
@@ -4662,6 +4687,54 @@ class TodoApp {
     const modal = document.getElementById('login-modal');
     if (modal) {
       modal.style.display = 'none';
+    }
+  }
+  
+  // 修改密码
+  async changePassword() {
+    const currentPassword = document.getElementById('current-password')?.value;
+    const newPassword = document.getElementById('new-password')?.value;
+    const confirmPassword = document.getElementById('confirm-password')?.value;
+    const messageEl = document.getElementById('password-message');
+    
+    const showMsg = (msg, type) => {
+      if (messageEl) {
+        messageEl.textContent = msg;
+        messageEl.className = `password-message ${type}`;
+        messageEl.style.display = 'block';
+      }
+    };
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showMsg('请填写所有字段', 'error');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      showMsg('新密码至少需要6位', 'error');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      showMsg('两次输入的密码不一致', 'error');
+      return;
+    }
+    
+    const result = await this.syncService.changePassword(currentPassword, newPassword);
+    
+    if (result.success) {
+      showMsg('✅ 密码修改成功！', 'success');
+      // 清空输入框
+      document.getElementById('current-password').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-password').value = '';
+      // 3秒后隐藏表单
+      setTimeout(() => {
+        document.getElementById('password-form')?.classList.add('hidden');
+        messageEl.style.display = 'none';
+      }, 2000);
+    } else {
+      showMsg(result.error, 'error');
     }
   }
   

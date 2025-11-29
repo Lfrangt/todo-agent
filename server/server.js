@@ -226,6 +226,42 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// 修改密码
+app.post('/api/auth/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: '请填写当前密码和新密码' });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '新密码至少需要6位' });
+    }
+    
+    // 获取用户
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
+    if (!user) {
+      return res.status(400).json({ error: '用户不存在' });
+    }
+    
+    // 验证当前密码
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      return res.status(400).json({ error: '当前密码错误' });
+    }
+    
+    // 更新密码
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, req.userId);
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: '修改密码失败' });
+  }
+});
+
 // 验证 Token
 app.get('/api/auth/verify', authenticate, (req, res) => {
   const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(req.userId);
