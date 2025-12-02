@@ -7,7 +7,6 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.smarttodo.app</string>
 				<string>com.googleusercontent.apps.367292299132-0ptni6dbt17jm31aji67q29ettph04vq</string>
 			</array>
 			<key>CFBundleURLName</key>
@@ -15,6 +14,6 @@
 		</dict>
 	</array>
 	<key>GIDClientID</key>
-	<string>367292299132-qrcf10ljl9dnroeq3bequ3ro3e6471ds.apps.googleusercontent.com</string>
+	<string>367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com</string>
 </dict>
 </plist>

@@ -1,6 +1,6 @@
 import SwiftUI
 import AuthenticationServices
-import CommonCrypto
+import GoogleSignIn
 
 struct SettingsView: View {
     @EnvironmentObject var settingsViewModel: SettingsViewModel
@@ -477,62 +477,41 @@ struct LoginView: View {
     }
     
     private func signInWithGoogle() {
-        // Google OAuth 配置 - 使用 Web Client + PKCE 流程
-        let clientId = "367292299132-qrcf10ljl9dnroeq3bequ3ro3e6471ds.apps.googleusercontent.com" // Web Client
-        let callbackScheme = "com.smarttodo.app"
-        let redirectUri = "\(callbackScheme):/oauth2callback"
-        let scope = "email profile openid"
+        // 使用 iOS Client ID
+        let clientId = "367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com"
         
-        // 生成 PKCE code verifier 和 challenge
-        let codeVerifier = generateCodeVerifier()
-        let codeChallenge = generateCodeChallenge(from: codeVerifier)
+        // 配置 Google Sign-In
+        let config = GIDConfiguration(clientID: clientId)
+        GIDSignIn.sharedInstance.configuration = config
         
-        var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
-        components.queryItems = [
-            URLQueryItem(name: "client_id", value: clientId),
-            URLQueryItem(name: "redirect_uri", value: redirectUri),
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: scope),
-            URLQueryItem(name: "code_challenge", value: codeChallenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
-            URLQueryItem(name: "access_type", value: "offline")
-        ]
-        
-        guard let authURL = components.url else {
-            errorMessage = "无法创建 Google 登录 URL"
+        // 获取当前的 presenting view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            errorMessage = "无法获取视图控制器"
             return
         }
         
-        // 保存 code verifier 用于后续交换 token
-        let savedCodeVerifier = codeVerifier
-        
-        // 使用 ASWebAuthenticationSession
-        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackScheme) { callbackURL, error in
+        // 执行 Google 登录
+        GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController) { result, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = "Google 授权取消"
+                    self.errorMessage = "Google 登录失败: \(error.localizedDescription)"
                 }
-                print("Google auth error: \(error)")
                 return
             }
             
-            guard let callbackURL = callbackURL,
-                  let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
-                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            guard let user = result?.user,
+                  let idToken = user.idToken?.tokenString else {
                 DispatchQueue.main.async {
-                    self.errorMessage = "Google 登录失败"
+                    self.errorMessage = "无法获取 Google 用户信息"
                 }
                 return
             }
             
-            // 用授权码换取 token
+            // 用 ID Token 登录后端
             Task {
                 do {
-                    let _ = try await cloudSync.loginWithGooglePKCE(
-                        code: code,
-                        codeVerifier: savedCodeVerifier,
-                        redirectUri: redirectUri
-                    )
+                    let _ = try await cloudSync.loginWithGoogle(idToken: idToken)
                     await MainActor.run {
                         dismiss()
                     }
@@ -543,35 +522,7 @@ struct LoginView: View {
                 }
             }
         }
-        
-        session.presentationContextProvider = GoogleSignInContextProvider.shared
-        session.prefersEphemeralWebBrowserSession = false
-        session.start()
     }
-    
-    // PKCE: 生成 code verifier (43-128 字符的随机字符串)
-    private func generateCodeVerifier() -> String {
-        var buffer = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, buffer.count, &buffer)
-        return Data(buffer).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-    
-    // PKCE: 生成 code challenge (SHA256 hash of verifier)
-    private func generateCodeChallenge(from verifier: String) -> String {
-        guard let data = verifier.data(using: .utf8) else { return "" }
-        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes {
-            _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash)
-        }
-        return Data(hash).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-    
     private func resetAccount() {
         guard !email.isEmpty, !password.isEmpty else {
             errorMessage = "请输入邮箱和新密码"
@@ -728,19 +679,6 @@ struct SettingsStepper: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Google Sign In Context Provider
-class GoogleSignInContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
-    static let shared = GoogleSignInContextProvider()
-    
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = scene.windows.first else {
-            return ASPresentationAnchor()
-        }
-        return window
     }
 }
 

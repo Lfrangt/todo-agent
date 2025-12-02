@@ -1,4 +1,5 @@
 import SwiftUI
+import GoogleSignIn
 
 @main
 struct SmartTodoApp: App {
@@ -13,7 +14,9 @@ struct SmartTodoApp: App {
                 .environmentObject(aiViewModel)
                 .environmentObject(settingsViewModel)
                 .preferredColorScheme(.dark)
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
+                }
         }
     }
 }
-
