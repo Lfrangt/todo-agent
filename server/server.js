@@ -676,9 +676,23 @@ app.post('/api/tasks/sync', authenticate, async (req, res) => {
     
     await client.query('COMMIT');
     
+    // 格式化任务数据，确保字段类型正确
+    const formattedTasks = serverTasks.rows.map(task => ({
+      id: task.id,
+      text: task.text || '',
+      notes: task.notes || '',
+      completed: task.completed === true,
+      priority: task.priority || 'medium',
+      category: task.category || 'personal',
+      dueDate: task.dueDate || null,
+      recurring: task.recurring || null,
+      createdAt: task.createdAt ? Number(task.createdAt) : null,
+      updatedAt: task.updatedAt ? Number(task.updatedAt) : null
+    }));
+    
     res.json({
       success: true,
-      tasks: serverTasks.rows,
+      tasks: formattedTasks,
       updated: updated.length,
       created: created.length,
       syncTime: Date.now()

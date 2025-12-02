@@ -377,7 +377,15 @@ class CloudSyncService: ObservableObject {
             throw SyncError.serverError("请求失败")
         }
         
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            print("❌ JSON Decode Error: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📄 Raw JSON: \(jsonString.prefix(1000))")
+            }
+            throw error
+        }
     }
     
     private func delete<T: Decodable>(_ path: String) async throws -> T {
@@ -450,9 +458,9 @@ struct CloudTask: Codable {
     let id: String
     let text: String
     let notes: String?
-    let completed: Bool
-    let priority: String
-    let category: String
+    let completed: Bool?
+    let priority: String?
+    let category: String?
     let dueDate: String?
     let recurring: String?
     let createdAt: Int?
@@ -463,9 +471,9 @@ struct CloudTask: Codable {
             id: id,
             text: text,
             notes: notes ?? "",
-            completed: completed,
-            priority: TodoTask.Priority(rawValue: priority) ?? .medium,
-            category: TodoTask.Category(rawValue: category) ?? .personal
+            completed: completed ?? false,
+            priority: TodoTask.Priority(rawValue: priority ?? "medium") ?? .medium,
+            category: TodoTask.Category(rawValue: category ?? "personal") ?? .personal
         )
         
         if let dueDateStr = dueDate {
