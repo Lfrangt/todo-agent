@@ -372,6 +372,102 @@ app.post('/api/auth/google-code', async (req, res) => {
   }
 });
 
+// Google OAuth 登录 (使用 PKCE)
+app.post('/api/auth/google-pkce', async (req, res) => {
+  try {
+    const { code, codeVerifier, redirectUri } = req.body;
+    
+    if (!code || !codeVerifier) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+    
+    // 用授权码 + code_verifier 换取 token (PKCE flow 不需要 client_secret)
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+        code_verifier: codeVerifier
+      })
+    });
+    
+    const tokenData = await tokenResponse.json();
+    console.log('Google PKCE token response:', tokenData);
+    
+    if (tokenData.error) {
+      return res.status(400).json({ error: tokenData.error_description || 'Google 授权失败' });
+    }
+    
+    if (!tokenData.access_token && !tokenData.id_token) {
+      return res.status(400).json({ error: 'Google 授权失败' });
+    }
+    
+    let email, name;
+    
+    // 如果有 id_token，解析它获取用户信息
+    if (tokenData.id_token) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: tokenData.id_token,
+          audience: GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        email = payload.email;
+        name = payload.name;
+      } catch (err) {
+        console.error('ID token verification failed:', err);
+      }
+    }
+    
+    // 如果没有从 id_token 获取到信息，用 access_token 获取用户信息
+    if (!email && tokenData.access_token) {
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      });
+      const googleUser = await userResponse.json();
+      email = googleUser.email;
+      name = googleUser.name;
+    }
+    
+    if (!email) {
+      return res.status(400).json({ error: '无法获取用户信息' });
+    }
+    
+    // 查找或创建用户
+    let user;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    
+    if (existing.rows.length > 0) {
+      user = existing.rows[0];
+    } else {
+      const userId = uuidv4();
+      const randomPassword = await bcrypt.hash(uuidv4(), 10);
+      
+      await pool.query(
+        'INSERT INTO users (id, email, password, name) VALUES ($1, $2, $3, $4)',
+        [userId, email, randomPassword, name || '']
+      );
+      
+      user = { id: userId, email, name };
+    }
+    
+    // 生成 token
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name || name }
+    });
+  } catch (err) {
+    console.error('Google PKCE login error:', err);
+    res.status(500).json({ error: 'Google 登录失败' });
+  }
+});
+
 // Apple OAuth 登录
 app.post('/api/auth/apple', async (req, res) => {
   try {

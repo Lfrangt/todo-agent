@@ -153,6 +153,25 @@ class CloudSyncService: ObservableObject {
         return response.user
     }
     
+    /// Google 登录 (使用 PKCE)
+    func loginWithGooglePKCE(code: String, codeVerifier: String, redirectUri: String) async throws -> User {
+        let body: [String: Any] = [
+            "code": code,
+            "codeVerifier": codeVerifier,
+            "redirectUri": redirectUri
+        ]
+        
+        let response: AuthResponse = try await post("/api/auth/google-pkce", body: body)
+        
+        await MainActor.run {
+            self.authToken = response.token
+            self.currentUser = response.user
+            self.isLoggedIn = true
+        }
+        
+        return response.user
+    }
+    
     /// Apple 登录
     func loginWithApple(identityToken: String, email: String?, fullName: String?) async throws -> User {
         let body: [String: Any] = [

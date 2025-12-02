@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import CommonCrypto
 
 struct SettingsView: View {
     @EnvironmentObject var settingsViewModel: SettingsViewModel
@@ -476,19 +477,25 @@ struct LoginView: View {
     }
     
     private func signInWithGoogle() {
-        // Google OAuth 配置 - 使用反转的 client ID 作为 URL scheme
+        // Google OAuth 配置 - 使用 PKCE 流程
         let clientId = "367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com"
         let reversedClientId = "com.googleusercontent.apps.367292299132-0ptni6dbt17jm31aji67q29ettph04vq"
-        let redirectUri = "\(reversedClientId):/oauth2redirect"
+        let redirectUri = "\(reversedClientId):/oauth2callback"
         let scope = "email profile openid"
+        
+        // 生成 PKCE code verifier 和 challenge
+        let codeVerifier = generateCodeVerifier()
+        let codeChallenge = generateCodeChallenge(from: codeVerifier)
         
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectUri),
-            URLQueryItem(name: "response_type", value: "id_token"),
+            URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: scope),
-            URLQueryItem(name: "nonce", value: UUID().uuidString)
+            URLQueryItem(name: "code_challenge", value: codeChallenge),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "access_type", value: "offline")
         ]
         
         guard let authURL = components.url else {
@@ -496,47 +503,43 @@ struct LoginView: View {
             return
         }
         
+        // 保存 code verifier 用于后续交换 token
+        let savedCodeVerifier = codeVerifier
+        
         // 使用 ASWebAuthenticationSession
         let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: reversedClientId) { callbackURL, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = "Google 授权失败"
+                    self.errorMessage = "Google 授权取消"
                 }
                 print("Google auth error: \(error)")
                 return
             }
             
-            guard let callbackURL = callbackURL else {
+            guard let callbackURL = callbackURL,
+                  let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
+                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
                 DispatchQueue.main.async {
                     self.errorMessage = "Google 登录失败"
                 }
                 return
             }
             
-            // 从 URL fragment 中提取 id_token
-            let urlString = callbackURL.absoluteString
-            if let fragmentStart = urlString.range(of: "#"),
-               let tokenRange = urlString.range(of: "id_token=", range: fragmentStart.upperBound..<urlString.endIndex) {
-                let tokenStart = tokenRange.upperBound
-                let tokenEnd = urlString[tokenStart...].firstIndex(of: "&") ?? urlString.endIndex
-                let idToken = String(urlString[tokenStart..<tokenEnd])
-                
-                // 用 id_token 登录
-                Task {
-                    do {
-                        let _ = try await cloudSync.loginWithGoogle(idToken: idToken)
-                        await MainActor.run {
-                            dismiss()
-                        }
-                    } catch {
-                        await MainActor.run {
-                            self.errorMessage = "登录失败: \(error.localizedDescription)"
-                        }
+            // 用授权码换取 token
+            Task {
+                do {
+                    let _ = try await cloudSync.loginWithGooglePKCE(
+                        code: code,
+                        codeVerifier: savedCodeVerifier,
+                        redirectUri: redirectUri
+                    )
+                    await MainActor.run {
+                        dismiss()
                     }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "无法获取登录凭证"
+                } catch {
+                    await MainActor.run {
+                        self.errorMessage = "登录失败: \(error.localizedDescription)"
+                    }
                 }
             }
         }
@@ -544,6 +547,29 @@ struct LoginView: View {
         session.presentationContextProvider = GoogleSignInContextProvider.shared
         session.prefersEphemeralWebBrowserSession = false
         session.start()
+    }
+    
+    // PKCE: 生成 code verifier (43-128 字符的随机字符串)
+    private func generateCodeVerifier() -> String {
+        var buffer = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, buffer.count, &buffer)
+        return Data(buffer).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+    
+    // PKCE: 生成 code challenge (SHA256 hash of verifier)
+    private func generateCodeChallenge(from verifier: String) -> String {
+        guard let data = verifier.data(using: .utf8) else { return "" }
+        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        data.withUnsafeBytes {
+            _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash)
+        }
+        return Data(hash).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
     
     private func resetAccount() {
