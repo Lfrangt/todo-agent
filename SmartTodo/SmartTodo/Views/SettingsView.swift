@@ -476,52 +476,73 @@ struct LoginView: View {
     }
     
     private func signInWithGoogle() {
-        // Google OAuth 配置
-        // 需要在 Google Cloud Console 创建 OAuth 客户端获取 Client ID
+        // Google OAuth 配置 - 使用反转的 client ID 作为 URL scheme
         let clientId = "367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com"
-        let redirectUri = "com.smarttodo.app:/oauth2callback"
-        let scope = "email profile"
+        let reversedClientId = "com.googleusercontent.apps.367292299132-0ptni6dbt17jm31aji67q29ettph04vq"
+        let redirectUri = "\(reversedClientId):/oauth2redirect"
+        let scope = "email profile openid"
         
-        guard let authURL = URL(string: "https://accounts.google.com/o/oauth2/v2/auth?client_id=\(clientId)&redirect_uri=\(redirectUri)&response_type=code&scope=\(scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? scope)") else {
+        var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: clientId),
+            URLQueryItem(name: "redirect_uri", value: redirectUri),
+            URLQueryItem(name: "response_type", value: "id_token"),
+            URLQueryItem(name: "scope", value: scope),
+            URLQueryItem(name: "nonce", value: UUID().uuidString)
+        ]
+        
+        guard let authURL = components.url else {
             errorMessage = "无法创建 Google 登录 URL"
             return
         }
         
         // 使用 ASWebAuthenticationSession
-        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: "com.smarttodo.app") { callbackURL, error in
+        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: reversedClientId) { callbackURL, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
+                    self.errorMessage = "Google 授权失败"
                 }
+                print("Google auth error: \(error)")
                 return
             }
             
-            guard let callbackURL = callbackURL,
-                  let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
-                  let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            guard let callbackURL = callbackURL else {
                 DispatchQueue.main.async {
                     self.errorMessage = "Google 登录失败"
                 }
                 return
             }
             
-            // 用授权码换取 token（需要后端处理）
-            Task {
-                do {
-                    let _ = try await cloudSync.loginWithGoogleCode(code: code)
-                    await MainActor.run {
-                        dismiss()
+            // 从 URL fragment 中提取 id_token
+            let urlString = callbackURL.absoluteString
+            if let fragmentStart = urlString.range(of: "#"),
+               let tokenRange = urlString.range(of: "id_token=", range: fragmentStart.upperBound..<urlString.endIndex) {
+                let tokenStart = tokenRange.upperBound
+                let tokenEnd = urlString[tokenStart...].firstIndex(of: "&") ?? urlString.endIndex
+                let idToken = String(urlString[tokenStart..<tokenEnd])
+                
+                // 用 id_token 登录
+                Task {
+                    do {
+                        let _ = try await cloudSync.loginWithGoogle(idToken: idToken)
+                        await MainActor.run {
+                            dismiss()
+                        }
+                    } catch {
+                        await MainActor.run {
+                            self.errorMessage = "登录失败: \(error.localizedDescription)"
+                        }
                     }
-                } catch {
-                    await MainActor.run {
-                        self.errorMessage = error.localizedDescription
-                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "无法获取登录凭证"
                 }
             }
         }
         
         session.presentationContextProvider = GoogleSignInContextProvider.shared
-        session.prefersEphemeralWebBrowserSession = true
+        session.prefersEphemeralWebBrowserSession = false
         session.start()
     }
     
