@@ -1,0 +1,36 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 高级渐变背景 -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    
+    <!-- 玻璃效果 -->
+    <linearGradient id="glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.25)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0.05)"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  
+  <!-- 中央圆形玻璃卡片 -->
+  <circle cx="512" cy="480" r="280" fill="url(#glass)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  
+  <!-- 简洁的勾选图标 -->
+  <path d="M380 480 L470 570 L650 390" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="56" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- 底部 AI 点缀 -->
+  <g transform="translate(512, 800)">
+    <circle cx="-60" cy="0" r="16" fill="white" opacity="0.8"/>
+    <circle cx="0" cy="0" r="20" fill="white"/>
+    <circle cx="60" cy="0" r="16" fill="white" opacity="0.8"/>
+  </g>
+</svg>

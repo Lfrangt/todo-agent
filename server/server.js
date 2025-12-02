@@ -301,6 +301,77 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
+// Google OAuth 登录 (使用授权码)
+app.post('/api/auth/google-code', async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: '缺少授权码' });
+    }
+    
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+    const redirectUri = 'com.smarttodo.app:/oauth2callback';
+    
+    // 用授权码换取 access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code'
+      })
+    });
+    
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+      return res.status(400).json({ error: 'Google 授权失败' });
+    }
+    
+    // 获取用户信息
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    });
+    
+    const googleUser = await userResponse.json();
+    const { email, name } = googleUser;
+    
+    // 查找或创建用户
+    let user;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    
+    if (existing.rows.length > 0) {
+      user = existing.rows[0];
+    } else {
+      const userId = uuidv4();
+      const randomPassword = await bcrypt.hash(uuidv4(), 10);
+      
+      await pool.query(
+        'INSERT INTO users (id, email, password, name) VALUES ($1, $2, $3, $4)',
+        [userId, email, randomPassword, name || '']
+      );
+      
+      user = { id: userId, email, name };
+    }
+    
+    // 生成 token
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name || name }
+    });
+  } catch (err) {
+    console.error('Google code login error:', err);
+    res.status(500).json({ error: 'Google 登录失败' });
+  }
+});
+
 // Apple OAuth 登录
 app.post('/api/auth/apple', async (req, res) => {
   try {

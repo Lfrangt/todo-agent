@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: "#0a0a1a",
+      backgroundColor: "#0a0f1e",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
@@ -19,7 +19,7 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#0a0a1a"
+      overlaysWebView: true
     },
     Keyboard: {
       resize: "body",
@@ -33,7 +33,8 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "automatic",
     preferredContentMode: "mobile",
-    scheme: "Smart Todo"
+    scheme: "Smart Todo",
+    backgroundColor: "#0a0f1e"
   }
 };
 

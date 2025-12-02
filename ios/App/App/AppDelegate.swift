@@ -7,7 +7,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // 设置整个窗口背景色与 App 一致
+        if let window = UIApplication.shared.windows.first {
+            window.backgroundColor = UIColor(red: 10/255, green: 15/255, blue: 30/255, alpha: 1.0)
+        }
         return true
     }
 
