@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require('uuid');
 const { OAuth2Client } = require('google-auth-library');
 
 // Google OAuth 客户端
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ''; // 需要在 Google Cloud Console 创建
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com';
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const app = express();
