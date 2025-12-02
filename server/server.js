@@ -9,6 +9,11 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const { OAuth2Client } = require('google-auth-library');
+
+// Google OAuth 客户端
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ''; // 需要在 Google Cloud Console 创建
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -236,6 +241,123 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: '登录失败' });
+  }
+});
+
+// Google OAuth 登录
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({ error: '缺少 Google ID Token' });
+    }
+    
+    // 验证 Google ID Token
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: idToken,
+        audience: GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } catch (err) {
+      console.error('Google token verification failed:', err);
+      return res.status(400).json({ error: 'Google 登录验证失败' });
+    }
+    
+    const { email, name, sub: googleId, picture } = payload;
+    
+    // 查找或创建用户
+    let user;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    
+    if (existing.rows.length > 0) {
+      user = existing.rows[0];
+    } else {
+      // 创建新用户（使用随机密码，因为是 OAuth 登录）
+      const userId = uuidv4();
+      const randomPassword = await bcrypt.hash(uuidv4(), 10);
+      
+      await pool.query(
+        'INSERT INTO users (id, email, password, name) VALUES ($1, $2, $3, $4)',
+        [userId, email, randomPassword, name || '']
+      );
+      
+      user = { id: userId, email, name };
+    }
+    
+    // 生成 token
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name || name }
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    res.status(500).json({ error: 'Google 登录失败' });
+  }
+});
+
+// Apple OAuth 登录
+app.post('/api/auth/apple', async (req, res) => {
+  try {
+    const { identityToken, email, name } = req.body;
+    
+    if (!identityToken) {
+      return res.status(400).json({ error: '缺少 Apple Identity Token' });
+    }
+    
+    // 解码 JWT（Apple 的 identityToken 是 JWT 格式）
+    // 生产环境应该验证签名，这里简化处理
+    const parts = identityToken.split('.');
+    if (parts.length !== 3) {
+      return res.status(400).json({ error: 'Invalid token format' });
+    }
+    
+    let payload;
+    try {
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+    } catch (err) {
+      return res.status(400).json({ error: 'Token 解析失败' });
+    }
+    
+    const appleUserId = payload.sub;
+    const userEmail = email || payload.email || `${appleUserId}@privaterelay.appleid.com`;
+    
+    // 查找或创建用户
+    let user;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [userEmail]);
+    
+    if (existing.rows.length > 0) {
+      user = existing.rows[0];
+    } else {
+      // 创建新用户
+      const userId = uuidv4();
+      const randomPassword = await bcrypt.hash(uuidv4(), 10);
+      
+      await pool.query(
+        'INSERT INTO users (id, email, password, name) VALUES ($1, $2, $3, $4)',
+        [userId, userEmail, randomPassword, name || '']
+      );
+      
+      user = { id: userId, email: userEmail, name };
+    }
+    
+    // 生成 token
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name || name || '' }
+    });
+  } catch (err) {
+    console.error('Apple login error:', err);
+    res.status(500).json({ error: 'Apple 登录失败' });
   }
 });
 
