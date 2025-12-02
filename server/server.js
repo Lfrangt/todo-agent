@@ -256,13 +256,26 @@ app.post('/api/auth/google', async (req, res) => {
     // 验证 Google ID Token
     let payload;
     try {
+      console.log('Verifying Google ID token with client ID:', GOOGLE_CLIENT_ID);
       const ticket = await googleClient.verifyIdToken({
         idToken: idToken,
         audience: GOOGLE_CLIENT_ID
       });
       payload = ticket.getPayload();
+      console.log('Google token verified, email:', payload.email);
     } catch (err) {
-      console.error('Google token verification failed:', err);
+      console.error('Google token verification failed:', err.message);
+      // 尝试不验证 audience（用于调试）
+      try {
+        const { OAuth2Client } = require('google-auth-library');
+        const client = new OAuth2Client();
+        const ticket = await client.verifyIdToken({ idToken: idToken });
+        payload = ticket.getPayload();
+        console.log('Token valid but audience mismatch. Token audience:', payload.aud);
+        console.log('Expected audience:', GOOGLE_CLIENT_ID);
+      } catch (e) {
+        console.error('Token completely invalid:', e.message);
+      }
       return res.status(400).json({ error: 'Google 登录验证失败' });
     }
     

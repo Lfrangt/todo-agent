@@ -5,15 +5,13 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.367292299132-0ptni6dbt17jm31aji67q29ettph04vq</string>
 			</array>
-			<key>CFBundleURLName</key>
-			<string>Google Sign-In</string>
 		</dict>
 	</array>
-	<key>GIDClientID</key>
-	<string>367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com</string>
 </dict>
 </plist>

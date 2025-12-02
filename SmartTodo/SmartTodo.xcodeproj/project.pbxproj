@@ -26,6 +26,7 @@
 
 /* Begin PBXFileReference section */
 		7CA316B92EDE75CA00BFF756 /* SmartTodo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SmartTodo.entitlements; sourceTree = "<group>"; };
+		7CA316BF2EDE825600BFF756 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A2000000 /* SmartTodo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTodo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000001 /* SmartTodoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartTodoApp.swift; sourceTree = "<group>"; };
 		A2000002 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
@@ -66,6 +67,7 @@
 		A4000001 /* SmartTodo */ = {
 			isa = PBXGroup;
 			children = (
+				7CA316BF2EDE825600BFF756 /* Info.plist */,
 				7CA316B92EDE75CA00BFF756 /* SmartTodo.entitlements */,
 				A2000001 /* SmartTodoApp.swift */,
 				A4000002 /* Models */,
@@ -345,6 +347,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SmartTodo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Smart Todo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -376,6 +379,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SmartTodo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Smart Todo";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
