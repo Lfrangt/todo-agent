@@ -477,10 +477,10 @@ struct LoginView: View {
     }
     
     private func signInWithGoogle() {
-        // Google OAuth 配置 - 使用 PKCE 流程
-        let clientId = "367292299132-0ptni6dbt17jm31aji67q29ettph04vq.apps.googleusercontent.com"
-        let reversedClientId = "com.googleusercontent.apps.367292299132-0ptni6dbt17jm31aji67q29ettph04vq"
-        let redirectUri = "\(reversedClientId):/oauth2callback"
+        // Google OAuth 配置 - 使用 Web Client + PKCE 流程
+        let clientId = "367292299132-qrcf10ljl9dnroeq3bequ3ro3e6471ds.apps.googleusercontent.com" // Web Client
+        let callbackScheme = "com.smarttodo.app"
+        let redirectUri = "\(callbackScheme):/oauth2callback"
         let scope = "email profile openid"
         
         // 生成 PKCE code verifier 和 challenge
@@ -507,7 +507,7 @@ struct LoginView: View {
         let savedCodeVerifier = codeVerifier
         
         // 使用 ASWebAuthenticationSession
-        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: reversedClientId) { callbackURL, error in
+        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackScheme) { callbackURL, error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = "Google 授权取消"
